@@ -37,9 +37,6 @@ import useLocalStorage from "@/src/components/useLocalStorage";
 import { noUrlCheck, StringNoHTMLNonEmpty } from "@langfuse/shared";
 import { PASSWORD_SETUP_EMAIL_STORAGE_KEY } from "@/src/features/auth-credentials/lib/credentialsUtils";
 
-// Use the same getServerSideProps function as src/pages/auth/sign-in.tsx
-export { getServerSideProps } from "@/src/pages/auth/sign-in";
-
 type NextAuthProvider = NonNullable<Parameters<typeof signIn>[0]>;
 
 // Schema for the verified signup flow (email + name only, no password)
@@ -52,7 +49,7 @@ const signupVerifyFormSchema = z.object({
   email: z.email(),
 });
 
-export default function SignUp({
+export default function SignUpPage({
   authProviders = FALLBACK_AUTH_PROVIDERS,
   runningOnHuggingFaceSpaces,
   emailVerificationRequired,
