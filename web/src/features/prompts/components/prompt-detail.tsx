@@ -69,7 +69,10 @@ import {
 import { DeletePromptVersion } from "@/src/features/prompts/components/delete-prompt-version";
 import { TagPromptDetailsPopover } from "@/src/features/tag/components/TagPromptDetailsPopover";
 import { SetPromptVersionLabels } from "@/src/features/prompts/components/SetPromptVersionLabels";
-import { CommentDrawerController } from "@/src/features/comments/CommentDrawerController";
+import {
+  CommentDrawerController,
+  useCommentDrawerUrlState,
+} from "@/src/features/comments/CommentDrawerController";
 import { Command, CommandInput } from "@/src/components/ui/command";
 import {
   PromptReferenceProvider,
@@ -124,6 +127,7 @@ export const PromptDetail = ({
   const projectId = useProjectIdFromURL();
   const capture = usePostHogClientCapture();
   const router = useRouter();
+  const commentDrawerUrlState = useCommentDrawerUrlState();
   const { isV4 } = useReadPath();
 
   const promptName =
@@ -474,8 +478,7 @@ export const PromptDetail = ({
                 )}
                 <CommentDrawerController
                   projectId={projectId as string}
-                  objectId={prompt.id}
-                  objectType="PROMPT"
+                  autoOpenState={commentDrawerUrlState}
                   count={getNumberFromMap(commentCounts, prompt.id)}
                   onCommentChange={() =>
                     utils.prompts.allVersions.invalidate(promptHistoryInput)
@@ -486,7 +489,13 @@ export const PromptDetail = ({
                       type="button"
                       variant="outline"
                       disabled={disabled}
-                      onClick={() => openDrawer({ type: "comments" })}
+                      onClick={() =>
+                        openDrawer({
+                          type: "comments",
+                          objectId: prompt.id,
+                          objectType: "PROMPT",
+                        })
+                      }
                       className="gap-1"
                     >
                       {disabled ? (

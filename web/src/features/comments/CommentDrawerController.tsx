@@ -9,7 +9,7 @@ import { CommentList } from "@/src/features/comments/CommentList";
 import { useHasProjectAccess } from "@/src/features/rbac";
 import { type CommentObjectType } from "@langfuse/shared";
 import { useRouter } from "next/router";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { type SelectionData } from "./contexts/InlineCommentSelectionContext";
 
 type CommentDrawerContentProps = {
@@ -78,9 +78,8 @@ function CommentDrawerContent({
 
 export type CommentDrawerControllerProps = {
   projectId: string;
-  objectId: string;
-  objectType: CommentObjectType;
-  objectStartTime?: Date | null;
+  autoOpenState?: CommentDrawerState;
+  allowReadOnly?: boolean;
   count?: number;
   onCommentChange?: () => void | Promise<void>;
   children: (control: {
@@ -89,57 +88,24 @@ export type CommentDrawerControllerProps = {
   }) => ReactNode;
 };
 
-type CommentDrawerState =
-  | { type: "comments" }
-  | { type: "inline-comment"; selection: SelectionData };
+type CommentDrawerTarget = {
+  objectId: string;
+  objectType: CommentObjectType;
+  objectStartTime?: Date | null;
+};
+
+export type CommentDrawerState = CommentDrawerTarget &
+  ({ type: "comments" } | { type: "inline-comment"; selection: SelectionData });
 
 function CommentDrawerTriggers({
   children,
   disabled,
-  isOpen,
-  objectId,
-  objectType,
   openDrawer,
 }: {
   children: CommentDrawerControllerProps["children"];
   disabled: boolean;
-  isOpen: boolean;
-  objectId: string;
-  objectType: CommentObjectType;
   openDrawer: (state: CommentDrawerState) => void;
 }) {
-  const router = useRouter();
-  const hasAutoOpenedRef = useRef(false);
-
-  useEffect(() => {
-    const shouldAutoOpen =
-      router.query.comments === "open" &&
-      router.query.commentObjectType === objectType &&
-      router.query.commentObjectId === objectId &&
-      !disabled &&
-      !isOpen &&
-      !hasAutoOpenedRef.current;
-
-    if (shouldAutoOpen) {
-      hasAutoOpenedRef.current = true;
-      openDrawer({ type: "comments" });
-
-      if (router.asPath.includes("#comment-")) {
-        setTimeout(() => {
-          const hash = router.asPath.split("#")[1];
-          document.getElementById(hash)?.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-          });
-        }, 300);
-      }
-    }
-
-    if (router.query.comments !== "open" && hasAutoOpenedRef.current) {
-      hasAutoOpenedRef.current = false;
-    }
-  }, [disabled, isOpen, objectId, objectType, openDrawer, router]);
-
   return children({
     disabled,
     openDrawer: (state) => {
@@ -151,9 +117,8 @@ function CommentDrawerTriggers({
 export function CommentDrawerController({
   children,
   projectId,
-  objectId,
-  objectType,
-  objectStartTime,
+  autoOpenState,
+  allowReadOnly = false,
   count,
   onCommentChange,
 }: CommentDrawerControllerProps) {
@@ -168,7 +133,21 @@ export function CommentDrawerController({
     projectId,
     scope: "comments:CUD",
   });
-  const disabled = !hasReadAccess || (!hasWriteAccess && !count);
+  const disabled =
+    !hasReadAccess || (!allowReadOnly && !hasWriteAccess && !count);
+
+  useEffect(() => {
+    if (disabled || !autoOpenState || !router.asPath.includes("#comment-"))
+      return;
+
+    setTimeout(() => {
+      const hash = router.asPath.split("#")[1];
+      document.getElementById(hash)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 300);
+  }, [autoOpenState, disabled, router.asPath]);
 
   const handleOpenChange = (open: boolean) => {
     if (!open && isMentionDropdownOpen) return false;
@@ -183,35 +162,53 @@ export function CommentDrawerController({
 
   return (
     <DrawerController<CommentDrawerState>
+      autoOpenState={disabled ? undefined : autoOpenState}
       key={hasReadAccess ? "allowed" : "denied"}
       blockTextSelection={false}
       onOpenChange={handleOpenChange}
       renderContent={({ state, replaceState }) => (
         <CommentDrawerContent
           projectId={projectId}
-          objectId={objectId}
-          objectType={objectType}
-          objectStartTime={objectStartTime}
+          objectId={state.objectId}
+          objectType={state.objectType}
+          objectStartTime={state.objectStartTime}
           pendingSelection={
             state.type === "inline-comment" ? state.selection : null
           }
-          onSelectionUsed={() => replaceState({ type: "comments" })}
+          onSelectionUsed={() => replaceState({ ...state, type: "comments" })}
           onCommentChange={onCommentChange}
           onMentionDropdownChange={setIsMentionDropdownOpen}
         />
       )}
     >
-      {({ isOpen, openDrawer }) => (
-        <CommentDrawerTriggers
-          disabled={disabled}
-          isOpen={hasReadAccess && isOpen}
-          objectId={objectId}
-          objectType={objectType}
-          openDrawer={openDrawer}
-        >
+      {({ openDrawer }) => (
+        <CommentDrawerTriggers disabled={disabled} openDrawer={openDrawer}>
           {children}
         </CommentDrawerTriggers>
       )}
     </DrawerController>
   );
+}
+
+export function useCommentDrawerUrlState() {
+  const router = useRouter();
+  const comments = router.query.comments;
+  const objectId = router.query.commentObjectId;
+  const objectType = router.query.commentObjectType;
+
+  return useMemo(() => {
+    if (
+      comments !== "open" ||
+      typeof objectId !== "string" ||
+      typeof objectType !== "string"
+    ) {
+      return undefined;
+    }
+
+    return {
+      type: "comments",
+      objectId,
+      objectType: objectType as CommentObjectType,
+    } satisfies CommentDrawerState;
+  }, [comments, objectId, objectType]);
 }

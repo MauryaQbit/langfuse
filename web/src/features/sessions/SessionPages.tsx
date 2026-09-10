@@ -18,7 +18,10 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { AnnotateDrawerController } from "@/src/features/scores/components/AnnotateDrawerController";
 import { ActionButtonCountBadge } from "@/src/components/ui/action-button-count-badge";
 import { Button } from "@/src/components/ui/button";
-import { CommentDrawerController } from "@/src/features/comments/CommentDrawerController";
+import {
+  CommentDrawerController,
+  useCommentDrawerUrlState,
+} from "@/src/features/comments/CommentDrawerController";
 import { useSession } from "next-auth/react";
 import {
   CheckIcon,
@@ -359,6 +362,7 @@ export const SessionPage: React.FC<{
   projectId: string;
 }> = ({ sessionId, projectId }) => {
   const router = useRouter();
+  const commentDrawerUrlState = useCommentDrawerUrlState();
   const { setDetailPageList, detailPagelists } = useDetailPageLists();
   const userSession = useSession();
   const capture = usePostHogClientCapture();
@@ -565,8 +569,7 @@ export const SessionPage: React.FC<{
               <CommentDrawerController
                 key="comment"
                 projectId={projectId}
-                objectId={sessionId}
-                objectType="SESSION"
+                autoOpenState={commentDrawerUrlState}
                 count={getNumberFromMap(sessionCommentCounts.data, sessionId)}
               >
                 {({ disabled, openDrawer }) => (
@@ -574,7 +577,13 @@ export const SessionPage: React.FC<{
                     type="button"
                     variant="outline"
                     disabled={disabled}
-                    onClick={() => openDrawer({ type: "comments" })}
+                    onClick={() =>
+                      openDrawer({
+                        type: "comments",
+                        objectId: sessionId,
+                        objectType: "SESSION",
+                      })
+                    }
                     className="gap-1"
                   >
                     {disabled ? (
@@ -685,8 +694,6 @@ export const SessionPage: React.FC<{
               <CopySessionIdButton sessionId={sessionId} layout="menu" />
               <CommentDrawerController
                 projectId={projectId}
-                objectId={sessionId}
-                objectType="SESSION"
                 count={getNumberFromMap(sessionCommentCounts.data, sessionId)}
               >
                 {({ disabled, openDrawer }) => (
@@ -695,7 +702,13 @@ export const SessionPage: React.FC<{
                     variant="ghost"
                     size="sm"
                     disabled={disabled}
-                    onClick={() => openDrawer({ type: "comments" })}
+                    onClick={() =>
+                      openDrawer({
+                        type: "comments",
+                        objectId: sessionId,
+                        objectType: "SESSION",
+                      })
+                    }
                     className="w-full justify-start gap-2 font-normal"
                   >
                     {disabled ? (
@@ -972,6 +985,7 @@ const LoadedSessionEventsPage: React.FC<{
   isTracesSuccess: boolean;
 }> = ({ sessionId, projectId, session, traces, isTracesSuccess }) => {
   const router = useRouter();
+  const commentDrawerUrlState = useCommentDrawerUrlState();
   const { setDetailPageList, detailPagelists } = useDetailPageLists();
   const userSession = useSession();
   const capture = usePostHogClientCapture();
@@ -1582,8 +1596,7 @@ const LoadedSessionEventsPage: React.FC<{
               <CommentDrawerController
                 key="comment"
                 projectId={projectId}
-                objectId={sessionId}
-                objectType="SESSION"
+                autoOpenState={commentDrawerUrlState}
                 count={getNumberFromMap(sessionCommentCounts.data, sessionId)}
               >
                 {({ disabled, openDrawer }) => (
@@ -1591,7 +1604,13 @@ const LoadedSessionEventsPage: React.FC<{
                     type="button"
                     variant="outline"
                     disabled={disabled}
-                    onClick={() => openDrawer({ type: "comments" })}
+                    onClick={() =>
+                      openDrawer({
+                        type: "comments",
+                        objectId: sessionId,
+                        objectType: "SESSION",
+                      })
+                    }
                     className="gap-1"
                   >
                     {disabled ? (
@@ -1734,8 +1753,6 @@ const LoadedSessionEventsPage: React.FC<{
               <CopySessionIdButton sessionId={sessionId} layout="menu" />
               <CommentDrawerController
                 projectId={projectId}
-                objectId={sessionId}
-                objectType="SESSION"
                 count={getNumberFromMap(sessionCommentCounts.data, sessionId)}
               >
                 {({ disabled, openDrawer }) => (
@@ -1744,7 +1761,13 @@ const LoadedSessionEventsPage: React.FC<{
                     variant="ghost"
                     size="sm"
                     disabled={disabled}
-                    onClick={() => openDrawer({ type: "comments" })}
+                    onClick={() =>
+                      openDrawer({
+                        type: "comments",
+                        objectId: sessionId,
+                        objectType: "SESSION",
+                      })
+                    }
                     className="w-full justify-start gap-2 font-normal"
                   >
                     {disabled ? (

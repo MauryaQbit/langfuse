@@ -237,6 +237,8 @@ type DrawerControllerProps<State = void> = Pick<
   | "modal"
   | "shouldScaleBackground"
 > & {
+  // Object states must be referentially stable; a new reference triggers opening.
+  autoOpenState?: State;
   onOpenChange?: (open: boolean) => boolean | void;
   children: (control: {
     isOpen: boolean;
@@ -250,6 +252,7 @@ type DrawerControllerProps<State = void> = Pick<
 };
 
 const DrawerController = <State = void,>({
+  autoOpenState,
   children,
   onOpenChange,
   renderContent,
@@ -258,6 +261,24 @@ const DrawerController = <State = void,>({
   const [controllerState, setControllerState] = React.useState<
     { active: false } | { active: boolean; state: State }
   >({ active: false });
+  const lastAutoOpenState = React.useRef<
+    { active: false } | { active: true; state: State }
+  >({ active: false });
+  React.useEffect(() => {
+    if (autoOpenState === undefined) {
+      lastAutoOpenState.current = { active: false };
+      return;
+    }
+    if (
+      lastAutoOpenState.current.active &&
+      Object.is(lastAutoOpenState.current.state, autoOpenState)
+    ) {
+      return;
+    }
+
+    lastAutoOpenState.current = { active: true, state: autoOpenState };
+    setControllerState({ active: true, state: autoOpenState });
+  }, [autoOpenState]);
   const closeDrawer = () =>
     setControllerState((currentState) =>
       "state" in currentState

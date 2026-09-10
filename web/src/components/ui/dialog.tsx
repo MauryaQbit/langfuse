@@ -175,6 +175,8 @@ DialogContent.displayName = DialogPrimitive.Content.displayName;
  * Owns dialog open state while callers retain trigger and content presentation.
  */
 type DialogControllerProps<State = void> = {
+  // Object states must be referentially stable; a new reference triggers opening.
+  autoOpenState?: State;
   children: (control: {
     isOpen: boolean;
     openDialog: (...args: [State] extends [void] ? [] : [state: State]) => void;
@@ -190,6 +192,7 @@ type DialogControllerProps<State = void> = {
 };
 
 const DialogController = <State = void,>({
+  autoOpenState,
   children,
   closeOnInteractionOutside,
   onBeforeClose,
@@ -200,6 +203,24 @@ const DialogController = <State = void,>({
   const [controllerState, setControllerState] = React.useState<
     { active: false } | { active: boolean; state: State }
   >({ active: false });
+  const lastAutoOpenState = React.useRef<
+    { active: false } | { active: true; state: State }
+  >({ active: false });
+  React.useEffect(() => {
+    if (autoOpenState === undefined) {
+      lastAutoOpenState.current = { active: false };
+      return;
+    }
+    if (
+      lastAutoOpenState.current.active &&
+      Object.is(lastAutoOpenState.current.state, autoOpenState)
+    ) {
+      return;
+    }
+
+    lastAutoOpenState.current = { active: true, state: autoOpenState };
+    setControllerState({ active: true, state: autoOpenState });
+  }, [autoOpenState]);
   const closeDialog = () => {
     if (onBeforeClose?.() === false) return false;
     setControllerState((currentState) =>

@@ -14,7 +14,10 @@ import {
 import { Tabs } from "@/src/components/design-system/Tabs/Tabs";
 import { Switch } from "@/src/components/design-system/Switch/Switch";
 import { useCallback, useMemo, useState } from "react";
-import { CommentDrawerController } from "@/src/features/comments/CommentDrawerController";
+import {
+  CommentDrawerController,
+  useCommentDrawerUrlState,
+} from "@/src/features/comments/CommentDrawerController";
 import { api } from "@/src/utils/api";
 import {
   Tooltip,
@@ -70,6 +73,7 @@ export function TraceDetailView({
   corrections,
   projectId,
 }: TraceDetailViewProps) {
+  const commentDrawerUrlState = useCommentDrawerUrlState();
   // Tab and view state from URL (via SelectionContext)
   const { selectedTab, setSelectedTab } = useSelection();
   const utils = api.useUtils();
@@ -206,8 +210,7 @@ export function TraceDetailView({
   return (
     <CommentDrawerController
       projectId={projectId}
-      objectId={trace.id}
-      objectType="TRACE"
+      autoOpenState={commentDrawerUrlState}
       count={comments.get(trace.id)}
     >
       {({ disabled, openDrawer }) => (
@@ -222,7 +225,12 @@ export function TraceDetailView({
             commentCount={comments.get(trace.id)}
             commentDrawerControl={{
               disabled,
-              openDrawer: () => openDrawer({ type: "comments" }),
+              openDrawer: () =>
+                openDrawer({
+                  type: "comments",
+                  objectId: trace.id,
+                  objectType: "TRACE",
+                }),
             }}
           />
 
@@ -422,7 +430,12 @@ export function TraceDetailView({
                   }
                   enableInlineComments={true}
                   onAddInlineComment={(selection) =>
-                    openDrawer({ type: "inline-comment", selection })
+                    openDrawer({
+                      type: "inline-comment",
+                      selection,
+                      objectId: trace.id,
+                      objectType: "TRACE",
+                    })
                   }
                   commentedPathsByField={commentedPathsByField}
                   showMetadata
